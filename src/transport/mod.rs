@@ -1,4 +1,10 @@
 pub mod direct;
+#[cfg(feature = "i2p")]
+pub mod i2p;
+#[cfg(feature = "nym")]
+pub mod nym;
+#[cfg(feature = "shadowsocks")]
+pub mod shadowsocks;
 pub mod socks5;
 #[cfg(feature = "tor")]
 pub mod tor;

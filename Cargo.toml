@@ -14,6 +14,9 @@ publish = true
 [features]
 default = ["tor"]
 tor = ["dep:arti-client", "dep:tor-rtcompat", "dep:rusqlite"]
+i2p = []
+shadowsocks = []
+nym = []
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
