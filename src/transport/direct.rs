@@ -6,12 +6,13 @@ use tracing::debug;
 
 use crate::error::{Error, Result};
 use crate::stream::AnonStream;
-use crate::transport::AnonTransport;
+use crate::transport::{AnonTransport, TransportCapability};
 
 /// Direct TCP transport — no anonymity layer.
 ///
 /// Used for testing and as a baseline. Connects directly to the target
 /// without any proxy or onion routing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DirectTransport;
 
 impl DirectTransport {
@@ -72,6 +73,11 @@ impl AnonTransport for DirectTransport {
     async fn is_ready(&self) -> bool {
         true
     }
+
+    fn capabilities(&self) -> Vec<TransportCapability> {
+        // Direct transport provides DNS resolution but no anonymity features.
+        vec![TransportCapability::DnsResolution]
+    }
 }
 
 #[cfg(test)]
@@ -108,5 +114,13 @@ mod tests {
         let t = DirectTransport::new();
         let result = t.connect("192.0.2.1", 1).await;
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn capabilities_has_dns_only() {
+        let t = DirectTransport::new();
+        let caps = t.capabilities();
+        assert_eq!(caps.len(), 1);
+        assert!(caps.contains(&TransportCapability::DnsResolution));
     }
 }

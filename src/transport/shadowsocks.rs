@@ -7,7 +7,7 @@ use tracing::{debug, info};
 
 use crate::error::{Error, Result};
 use crate::stream::AnonStream;
-use crate::transport::AnonTransport;
+use crate::transport::{AnonTransport, TransportCapability};
 
 /// Shadowsocks transport backend.
 ///
@@ -20,6 +20,7 @@ use crate::transport::AnonTransport;
 /// A running `ss-local` instance configured with the appropriate server,
 /// password, and cipher method. By default, `ss-local` listens on
 /// `127.0.0.1:1080`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ShadowsocksTransport {
     /// Address where the local `ss-local` SOCKS5 proxy listens.
     local_socks_addr: SocketAddr,
@@ -91,6 +92,15 @@ impl AnonTransport for ShadowsocksTransport {
         // Check if the local ss-local SOCKS5 port is reachable
         TcpStream::connect(self.local_socks_addr).await.is_ok()
     }
+
+    fn capabilities(&self) -> Vec<TransportCapability> {
+        // Shadowsocks provides IP anonymity and DPI resistance through its
+        // AEAD stream cipher.
+        vec![
+            TransportCapability::IpAnonymity,
+            TransportCapability::DpiResistant,
+        ]
+    }
 }
 
 #[cfg(test)]
@@ -136,5 +146,14 @@ mod tests {
     async fn new_identity_is_noop() {
         let t = ShadowsocksTransport::default_config();
         t.new_identity().await.unwrap();
+    }
+
+    #[test]
+    fn capabilities_has_anonymity_and_dpi() {
+        let t = ShadowsocksTransport::default_config();
+        let caps = t.capabilities();
+        assert_eq!(caps.len(), 2);
+        assert!(caps.contains(&TransportCapability::IpAnonymity));
+        assert!(caps.contains(&TransportCapability::DpiResistant));
     }
 }

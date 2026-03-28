@@ -7,12 +7,13 @@ use tracing::{debug, info};
 
 use crate::error::{Error, Result};
 use crate::stream::AnonStream;
-use crate::transport::AnonTransport;
+use crate::transport::{AnonTransport, TransportCapability};
 
 /// SOCKS5 proxy transport.
 ///
 /// Connects through an external SOCKS5 proxy (e.g., a running Tor instance,
 /// an SSH tunnel, or any SOCKS5-compatible proxy server).
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Socks5Transport {
     proxy_addr: String,
 }
@@ -97,6 +98,11 @@ impl AnonTransport for Socks5Transport {
         // Try to connect to the proxy to check if it's running
         TcpStream::connect(&*self.proxy_addr).await.is_ok()
     }
+
+    fn capabilities(&self) -> Vec<TransportCapability> {
+        // SOCKS5 proxy provides IP anonymity (hides client IP from target).
+        vec![TransportCapability::IpAnonymity]
+    }
 }
 
 #[cfg(test)]
@@ -133,5 +139,13 @@ mod tests {
         let t = Socks5Transport::new("127.0.0.1:9050");
         let result = t.connect_onion("not-an-onion.com", 80).await;
         assert!(matches!(result, Err(Error::InvalidAddress(_))));
+    }
+
+    #[test]
+    fn capabilities_has_ip_anonymity() {
+        let t = Socks5Transport::new("127.0.0.1:9050");
+        let caps = t.capabilities();
+        assert_eq!(caps.len(), 1);
+        assert!(caps.contains(&TransportCapability::IpAnonymity));
     }
 }

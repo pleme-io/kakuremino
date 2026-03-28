@@ -7,7 +7,7 @@ use tracing::{debug, info};
 
 use crate::error::{Error, Result};
 use crate::stream::AnonStream;
-use crate::transport::AnonTransport;
+use crate::transport::{AnonTransport, TransportCapability};
 
 /// Default Nym SOCKS5 network requester address.
 const DEFAULT_NYM_SOCKS5_ADDR: SocketAddr = SocketAddr::new(
@@ -31,6 +31,7 @@ const DEFAULT_NYM_SOCKS5_ADDR: SocketAddr = SocketAddr::new(
 /// - Does not support `.onion` addresses (Tor-specific).
 /// - DNS resolution is handled by the network requester, not exposed locally.
 /// - Higher latency than Tor due to mixnet store-and-forward design.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NymTransport {
     /// Address where the Nym SOCKS5 network requester listens.
     socks5_addr: SocketAddr,
@@ -100,6 +101,15 @@ impl AnonTransport for NymTransport {
         // Check if the Nym SOCKS5 network requester port is reachable
         TcpStream::connect(self.socks5_addr).await.is_ok()
     }
+
+    fn capabilities(&self) -> Vec<TransportCapability> {
+        // Nym provides IP anonymity through its mixnet and DPI resistance
+        // via Sphinx packet encryption.
+        vec![
+            TransportCapability::IpAnonymity,
+            TransportCapability::DpiResistant,
+        ]
+    }
 }
 
 #[cfg(test)]
@@ -152,5 +162,14 @@ mod tests {
         let addr = SocketAddr::from(([10, 0, 0, 5], 9999));
         let t = NymTransport::new(addr);
         assert_eq!(t.socks5_addr(), addr);
+    }
+
+    #[test]
+    fn capabilities_has_anonymity_and_dpi() {
+        let t = NymTransport::default_config();
+        let caps = t.capabilities();
+        assert_eq!(caps.len(), 2);
+        assert!(caps.contains(&TransportCapability::IpAnonymity));
+        assert!(caps.contains(&TransportCapability::DpiResistant));
     }
 }

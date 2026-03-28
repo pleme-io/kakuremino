@@ -7,7 +7,7 @@ use tracing::{debug, info};
 
 use crate::error::{Error, Result};
 use crate::stream::AnonStream;
-use crate::transport::AnonTransport;
+use crate::transport::{AnonTransport, TransportCapability};
 
 /// Default SAMv3 bridge address (I2P router SAM port).
 const DEFAULT_SAM_ADDR: SocketAddr = SocketAddr::new(
@@ -29,6 +29,7 @@ const DEFAULT_SAM_ADDR: SocketAddr = SocketAddr::new(
 ///
 /// I2P is an overlay network — it does not support clearnet (regular internet)
 /// connections. Use `connect_onion()` with `.i2p` (base32) addresses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct I2pTransport {
     /// Address of the local SAMv3 bridge.
     sam_addr: SocketAddr,
@@ -258,8 +259,8 @@ impl AnonTransport for I2pTransport {
         // identity. The next connect_onion() call will create a fresh session.
         // Validate the SAM bridge is reachable.
         let session = self.create_session("kakuremino-identity").await?;
-        // Read any trailing data and drop the session
-        let _ = session.buffer();
+        // Session created successfully with a new transient destination — drop it
+        drop(session);
         Ok(())
     }
 
@@ -274,6 +275,16 @@ impl AnonTransport for I2pTransport {
         };
         let mut stream = BufReader::new(tcp);
         Self::sam_hello(&mut stream).await.is_ok()
+    }
+
+    fn capabilities(&self) -> Vec<TransportCapability> {
+        // I2P provides IP anonymity and DPI resistance through its garlic routing.
+        // It does not support .onion addresses (Tor-specific) and uses its own
+        // naming system instead of DNS.
+        vec![
+            TransportCapability::IpAnonymity,
+            TransportCapability::DpiResistant,
+        ]
     }
 }
 
@@ -318,5 +329,14 @@ mod tests {
         let addr = SocketAddr::from(([192, 168, 1, 100], 7656));
         let t = I2pTransport::new(addr);
         assert_eq!(t.sam_addr(), addr);
+    }
+
+    #[test]
+    fn capabilities_has_anonymity_and_dpi() {
+        let t = I2pTransport::default_config();
+        let caps = t.capabilities();
+        assert_eq!(caps.len(), 2);
+        assert!(caps.contains(&TransportCapability::IpAnonymity));
+        assert!(caps.contains(&TransportCapability::DpiResistant));
     }
 }

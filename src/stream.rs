@@ -25,11 +25,13 @@ impl<T: AsyncRead + AsyncWrite + Send + Unpin> AsyncReadWrite for T {}
 
 impl AnonStream {
     /// Create from a TCP stream.
+    #[must_use]
     pub fn from_tcp(stream: TcpStream) -> Self {
         Self::Tcp { inner: stream }
     }
 
     /// Create from a boxed async stream.
+    #[must_use]
     pub fn from_boxed(stream: impl AsyncRead + AsyncWrite + Send + Unpin + 'static) -> Self {
         Self::Boxed {
             inner: Box::pin(stream),

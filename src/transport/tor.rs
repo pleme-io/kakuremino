@@ -8,7 +8,7 @@ use tracing::{debug, info};
 
 use crate::error::{Error, Result};
 use crate::stream::AnonStream;
-use crate::transport::AnonTransport;
+use crate::transport::{AnonTransport, TransportCapability};
 
 /// Tor transport backend using Arti (official Rust Tor implementation).
 ///
@@ -40,6 +40,7 @@ impl TorTransport {
     }
 
     /// Create from an existing `TorClient` instance.
+    #[must_use]
     pub fn from_client(client: TorClient<PreferredRuntime>) -> Self {
         Self {
             client: Arc::new(client),
@@ -113,6 +114,17 @@ impl AnonTransport for TorTransport {
     async fn is_ready(&self) -> bool {
         // Check if the Tor client has a valid consensus and can build circuits
         self.client.bootstrap().await.is_ok()
+    }
+
+    fn capabilities(&self) -> Vec<TransportCapability> {
+        // Tor provides the full anonymity feature set.
+        vec![
+            TransportCapability::OnionRouting,
+            TransportCapability::IpAnonymity,
+            TransportCapability::StreamIsolation,
+            TransportCapability::DnsResolution,
+            TransportCapability::DpiResistant,
+        ]
     }
 }
 
