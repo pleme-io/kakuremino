@@ -1,0 +1,43 @@
+[package]
+name = "kakuremino"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89.0"
+license = "MIT"
+description = "Anonymous transport library — trait-based backends for Tor, SOCKS5, and direct TCP"
+homepage = "https://github.com/pleme-io/kakuremino"
+repository = "https://github.com/pleme-io/kakuremino"
+categories = ["network-programming", "cryptography"]
+keywords = ["tor", "anonymous", "privacy", "transport", "onion"]
+publish = true
+
+[features]
+default = ["tor"]
+tor = ["dep:arti-client", "dep:tor-rtcompat", "dep:rusqlite"]
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+
+[dependencies]
+arti-client = { version = "0.28", default-features = false, features = ["tokio", "rustls", "onion-service-client"], optional = true }
+tor-rtcompat = { version = "0.28", default-features = false, features = ["tokio", "rustls"], optional = true }
+rusqlite = { version = "0.32", features = ["bundled"], optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "macros", "io-util"] }
+tokio-socks = "0.5"
+async-trait = "0.1"
+thiserror = "2"
+tracing = "0.1"
+pin-project-lite = "0.2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "test-util"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "z"
+strip = true
