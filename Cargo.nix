@@ -4625,6 +4625,15 @@ rec {
             features = [ "bundled" ];
           }
           {
+            name = "serde";
+            packageId = "serde";
+            features = [ "derive" ];
+          }
+          {
+            name = "serde_json";
+            packageId = "serde_json";
+          }
+          {
             name = "thiserror";
             packageId = "thiserror 2.0.18";
           }
